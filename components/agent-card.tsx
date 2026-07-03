@@ -13,7 +13,7 @@ import {
 interface AgentCardProps {
   name: string
   icon: React.ReactNode
-  status: 'idle' | 'active'
+  status: 'idle' | 'running' | 'completed'
   logs: string[]
 }
 
@@ -41,33 +41,18 @@ const TERMINAL_LOGS = {
   ],
 }
 
-export function AgentCard({ name, icon, status }: AgentCardProps) {
-  const [displayedLogs, setDisplayedLogs] = useState<string[]>([])
-  const [logIndex, setLogIndex] = useState(0)
-  const logs = TERMINAL_LOGS[name as keyof typeof TERMINAL_LOGS] || []
-
-  useEffect(() => {
-    if (status === 'active') {
-      const timer = setInterval(() => {
-        setLogIndex((prev) => (prev + 1) % logs.length)
-        setDisplayedLogs((prev) => {
-          const newLogs = [...prev, logs[logIndex]]
-          return newLogs.slice(-4) // Keep last 4 logs visible
-        })
-      }, 1500)
-      return () => clearInterval(timer)
-    } else {
-      setDisplayedLogs([])
-      setLogIndex(0)
-    }
-  }, [status, logs, logIndex])
+export function AgentCard({ name, icon, status, logs }: AgentCardProps) {
+  // Use provided logs if available, otherwise use default TERMINAL_LOGS
+  const displayLogs = logs && logs.length > 0 ? logs : []
 
   return (
     <div
       className={`relative rounded-lg border overflow-hidden transition-all duration-300 ${
-        status === 'active'
+        status === 'running'
           ? 'bg-slate-800 border-amber-500/30 glow-amber-active shadow-lg'
-          : 'bg-slate-800/50 border-slate-700 hover:border-slate-600'
+          : status === 'completed'
+            ? 'bg-slate-800 border-emerald-500/30 glow-green shadow-lg'
+            : 'bg-slate-800/50 border-slate-700 hover:border-slate-600'
       }`}
     >
       {/* Top accent bar */}
@@ -85,13 +70,19 @@ export function AgentCard({ name, icon, status }: AgentCardProps) {
           <div className="flex items-center gap-2">
             <div
               className={`w-2 h-2 rounded-full transition-all ${
-                status === 'active'
-                  ? 'bg-emerald-400 animate-pulse-slow shadow-lg shadow-emerald-400/50'
-                  : 'bg-slate-500'
+                status === 'running'
+                  ? 'bg-amber-400 animate-pulse-slow shadow-lg shadow-amber-400/50'
+                  : status === 'completed'
+                    ? 'bg-emerald-400 shadow-lg shadow-emerald-400/50'
+                    : 'bg-slate-500'
               }`}
             />
             <span className="text-xs font-medium text-slate-400">
-              {status === 'active' ? 'Active' : 'Idle'}
+              {status === 'running'
+                ? 'Running'
+                : status === 'completed'
+                  ? 'Completed'
+                  : 'Idle'}
             </span>
           </div>
         </div>
@@ -105,21 +96,25 @@ export function AgentCard({ name, icon, status }: AgentCardProps) {
         </div>
 
         <div className="px-3 py-2 min-h-20 max-h-32 overflow-y-auto text-xs terminal-text space-y-1">
-          {displayedLogs.length === 0 ? (
+          {displayLogs.length === 0 ? (
             <div className="text-slate-600">
               {status === 'idle' ? (
                 <span className="text-slate-500">&gt; Waiting for command...</span>
+              ) : status === 'running' ? (
+                <span className="text-amber-500 animate-pulse">&gt; Processing...</span>
               ) : (
-                <span className="text-slate-500">&gt; Initializing...</span>
+                <span className="text-emerald-500">&gt; Completed</span>
               )}
             </div>
           ) : (
-            displayedLogs.map((log, idx) => (
+            displayLogs.map((log, idx) => (
               <div key={idx} className="text-slate-300 break-words">
                 {log.startsWith('✓') || log.startsWith('!') ? (
                   <span className="text-emerald-400">{log}</span>
                 ) : log.includes('error') || log.includes('Error') ? (
                   <span className="text-red-400">{log}</span>
+                ) : log.startsWith('>') ? (
+                  <span className="text-cyan-400">{log}</span>
                 ) : (
                   <span className="text-slate-300">{log}</span>
                 )}
@@ -129,8 +124,8 @@ export function AgentCard({ name, icon, status }: AgentCardProps) {
         </div>
       </div>
 
-      {/* Loading animation when active */}
-      {status === 'active' && (
+      {/* Loading animation when running */}
+      {status === 'running' && (
         <div className="px-4 pb-4">
           <div className="flex items-center gap-2">
             <div className="flex gap-1">
@@ -146,6 +141,18 @@ export function AgentCard({ name, icon, status }: AgentCardProps) {
               ))}
             </div>
             <span className="text-xs text-amber-400/70">Processing...</span>
+          </div>
+        </div>
+      )}
+
+      {/* Completion indicator */}
+      {status === 'completed' && (
+        <div className="px-4 pb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded-full bg-emerald-400/20 border border-emerald-400 flex items-center justify-center">
+              <div className="w-2 h-2 rounded-full bg-emerald-400" />
+            </div>
+            <span className="text-xs text-emerald-400/70">Completed</span>
           </div>
         </div>
       )}

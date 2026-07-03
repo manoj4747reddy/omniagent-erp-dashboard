@@ -1,74 +1,49 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import { DollarSign, Package, BarChart3, Zap } from 'lucide-react'
 import { AgentCard } from './agent-card'
 
+type AgentStatus = 'idle' | 'running' | 'completed'
+
+interface AgentState {
+  status: AgentStatus
+  logs: string[]
+}
+
+interface AgentStatuses {
+  Finance: AgentState
+  Inventory: AgentState
+  Analytics: AgentState
+}
+
 interface AgentMatrixProps {
-  activeAgent?: string | null
+  agentStatuses: AgentStatuses
 }
 
 const AGENTS = [
   {
-    id: 'finance',
+    id: 'Finance',
     name: 'Finance Agent',
     icon: <DollarSign className="w-5 h-5" />,
   },
   {
-    id: 'inventory',
+    id: 'Inventory',
     name: 'Inventory Agent',
     icon: <Package className="w-5 h-5" />,
   },
   {
-    id: 'analytics',
+    id: 'Analytics',
     name: 'Analytics Agent',
     icon: <BarChart3 className="w-5 h-5" />,
   },
 ]
 
-export function AgentMatrix({ activeAgent }: AgentMatrixProps) {
-  const [agents, setAgents] = useState(
-    AGENTS.map((agent) => ({
-      ...agent,
-      status: 'idle' as 'idle' | 'active',
-      logs: [],
-    }))
-  )
+export function AgentMatrix({ agentStatuses }: AgentMatrixProps) {
+  const getAgentActiveCount = () => {
+    return Object.values(agentStatuses).filter((a) => a.status === 'running').length
+  }
 
-  useEffect(() => {
-    // Auto-activate agents in sequence for demo
-    const financeTimer = setTimeout(() => {
-      setAgents((prev) =>
-        prev.map((a) => (a.id === 'finance' ? { ...a, status: 'active' } : a))
-      )
-    }, 500)
-
-    const inventoryTimer = setTimeout(() => {
-      setAgents((prev) =>
-        prev.map((a) => (a.id === 'inventory' ? { ...a, status: 'active' } : a))
-      )
-    }, 3500)
-
-    const analyticsTimer = setTimeout(() => {
-      setAgents((prev) =>
-        prev.map((a) => (a.id === 'analytics' ? { ...a, status: 'active' } : a))
-      )
-    }, 6500)
-
-    // Deactivate all after demo
-    const resetTimer = setTimeout(() => {
-      setAgents((prev) =>
-        prev.map((a) => ({ ...a, status: 'idle' }))
-      )
-    }, 12000)
-
-    return () => {
-      clearTimeout(financeTimer)
-      clearTimeout(inventoryTimer)
-      clearTimeout(analyticsTimer)
-      clearTimeout(resetTimer)
-    }
-  }, [])
+  const activeCount = getAgentActiveCount()
 
   return (
     <div className="flex flex-col h-full bg-slate-900 border border-slate-700 rounded-lg overflow-hidden">
@@ -80,21 +55,25 @@ export function AgentMatrix({ activeAgent }: AgentMatrixProps) {
             <h2 className="text-sm font-semibold text-slate-100">Agent Matrix</h2>
           </div>
           <div className="flex items-center gap-2 text-xs text-slate-400">
-            <div className="w-2 h-2 rounded-full bg-emerald-400" />
-            <span>2 Active</span>
+            <div
+              className={`w-2 h-2 rounded-full ${
+                activeCount > 0 ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'
+              }`}
+            />
+            <span>{activeCount > 0 ? `${activeCount} Active` : 'All Idle'}</span>
           </div>
         </div>
       </div>
 
       {/* Agent Cards */}
       <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
-        {agents.map((agent) => (
+        {AGENTS.map((agent) => (
           <AgentCard
             key={agent.id}
             name={agent.name}
             icon={agent.icon}
-            status={agent.status}
-            logs={agent.logs}
+            status={agentStatuses[agent.id as keyof AgentStatuses].status}
+            logs={agentStatuses[agent.id as keyof AgentStatuses].logs}
           />
         ))}
 

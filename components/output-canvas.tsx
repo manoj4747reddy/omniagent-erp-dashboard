@@ -13,27 +13,57 @@ import { InvoiceView } from './views/invoice-view'
 import { ChartView } from './views/chart-view'
 import { KPIView } from './views/kpi-view'
 
-type ViewType = 'invoice' | 'chart' | 'kpi'
+type ViewType = 'welcome' | 'invoice' | 'inventory' | 'analytics'
+
+interface OutputCanvasProps {
+  activeView?: ViewType
+  onViewChange?: (view: ViewType) => void
+}
 
 const VIEW_TABS = [
   { id: 'invoice', label: 'Invoice', icon: <FileText className="w-4 h-4" /> },
-  { id: 'chart', label: 'Inventory', icon: <BarChart3 className="w-4 h-4" /> },
-  { id: 'kpi', label: 'Metrics', icon: <Zap className="w-4 h-4" /> },
+  { id: 'inventory', label: 'Inventory', icon: <BarChart3 className="w-4 h-4" /> },
+  { id: 'analytics', label: 'Metrics', icon: <Zap className="w-4 h-4" /> },
 ] as const
 
-export function OutputCanvas() {
-  const [activeView, setActiveView] = useState<ViewType>('invoice')
+export function OutputCanvas({
+  activeView: controlledActiveView = 'welcome',
+  onViewChange,
+}: OutputCanvasProps) {
+  const [localView, setLocalView] = useState<ViewType>('welcome')
+  const activeView = controlledActiveView !== 'welcome' ? controlledActiveView : localView
+
+  const handleViewChange = (view: ViewType) => {
+    if (view !== 'welcome') {
+      setLocalView(view)
+      onViewChange?.(view)
+    }
+  }
 
   const renderView = () => {
     switch (activeView) {
       case 'invoice':
         return <InvoiceView />
-      case 'chart':
+      case 'inventory':
         return <ChartView />
-      case 'kpi':
+      case 'analytics':
         return <KPIView />
+      case 'welcome':
       default:
-        return null
+        return (
+          <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-slate-800/30 to-slate-900/50 p-6">
+            <div className="text-center max-w-sm">
+              <Zap className="w-12 h-12 text-amber-400 mx-auto mb-4 opacity-50" />
+              <h3 className="text-lg font-semibold text-slate-100 mb-2">
+                Ready for Processing
+              </h3>
+              <p className="text-sm text-slate-400 leading-relaxed">
+                Enter a business command in the left panel to trigger multi-agent processing.
+                Results will be displayed here automatically.
+              </p>
+            </div>
+          </div>
+        )
     }
   }
 
@@ -46,7 +76,7 @@ export function OutputCanvas() {
             {VIEW_TABS.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveView(tab.id as ViewType)}
+                onClick={() => handleViewChange(tab.id as ViewType)}
                 className={`px-4 py-2 rounded-t flex items-center gap-2 text-sm font-medium transition-all duration-200 ${
                   activeView === tab.id
                     ? 'bg-slate-700 text-amber-400 border-b-2 border-amber-400'

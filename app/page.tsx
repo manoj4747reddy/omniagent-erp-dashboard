@@ -6,34 +6,169 @@ import { CommandPanel } from '@/components/command-panel'
 import { AgentMatrix } from '@/components/agent-matrix'
 import { OutputCanvas } from '@/components/output-canvas'
 
+type AgentStatus = 'idle' | 'running' | 'completed'
+type ViewType = 'welcome' | 'invoice' | 'inventory' | 'analytics'
+
+interface AgentState {
+  status: AgentStatus
+  logs: string[]
+}
+
+interface AgentStatuses {
+  Finance: AgentState
+  Inventory: AgentState
+  Analytics: AgentState
+}
+
 export default function Dashboard() {
-  const [activeAgent, setActiveAgent] = useState<string | null>(null)
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [activeView, setActiveView] = useState<ViewType>('welcome')
+  const [agentStatuses, setAgentStatuses] = useState<AgentStatuses>({
+    Finance: { status: 'idle', logs: [] },
+    Inventory: { status: 'idle', logs: [] },
+    Analytics: { status: 'idle', logs: [] },
+  })
   const [isRefreshing, setIsRefreshing] = useState(false)
+
+  const analyticsLogs = [
+    '> Collecting metrics from all sources...',
+    '> Processing 1.2M page views...',
+    '> Analyzing conversion patterns...',
+    '✓ Conversion rate: 3.4%',
+    '✓ Avg session time: 4m 32s',
+    '✓ User engagement: 87.3%',
+    '> Compiling dashboard insights...',
+    '✓ Dashboard compiled successfully',
+  ]
+
+  const inventoryLogs = [
+    '> Scanning warehouse systems...',
+    '> Connecting to WMS...',
+    '✓ Warehouse A: 4,230 units',
+    '✓ Warehouse B: 3,890 units',
+    '✓ Warehouse C: 2,150 units',
+    '> Analyzing stock levels...',
+    '✓ Reorder alerts: 5 items',
+    '✓ Inventory check complete',
+  ]
+
+  const financeLogs = [
+    '> Fetching Q3 financial data...',
+    '> Accessing ledger systems...',
+    '✓ Revenue calculated: $2.4M',
+    '✓ Operating expenses: $1.8M',
+    '✓ Net profit: $600K',
+    '> Generating invoice report...',
+    '> PDF generation in progress...',
+    '✓ Invoice report generated',
+  ]
+
+  const handleCommand = (command: string) => {
+    if (isProcessing) return
+
+    setIsProcessing(true)
+
+    // Reset all states
+    setAgentStatuses({
+      Finance: { status: 'idle', logs: [] },
+      Inventory: { status: 'idle', logs: [] },
+      Analytics: { status: 'idle', logs: [] },
+    })
+    setActiveView('welcome')
+
+    // Start Analytics agent immediately
+    setTimeout(() => {
+      setAgentStatuses((prev) => ({
+        ...prev,
+        Analytics: { status: 'running', logs: [] },
+      }))
+
+      // Stream analytics logs
+      analyticsLogs.forEach((log, idx) => {
+        setTimeout(() => {
+          setAgentStatuses((prev) => ({
+            ...prev,
+            Analytics: {
+              status: prev.Analytics.status,
+              logs: [...prev.Analytics.logs, log],
+            },
+          }))
+        }, idx * 400)
+      })
+
+      // Complete analytics after all logs are streamed
+      setTimeout(() => {
+        setAgentStatuses((prev) => ({
+          ...prev,
+          Analytics: { ...prev.Analytics, status: 'completed' },
+        }))
+      }, analyticsLogs.length * 400 + 200)
+    }, 100)
+
+    // Start Inventory agent after analytics completes
+    setTimeout(() => {
+      setAgentStatuses((prev) => ({
+        ...prev,
+        Inventory: { status: 'running', logs: [] },
+      }))
+
+      // Stream inventory logs
+      inventoryLogs.forEach((log, idx) => {
+        setTimeout(() => {
+          setAgentStatuses((prev) => ({
+            ...prev,
+            Inventory: {
+              status: prev.Inventory.status,
+              logs: [...prev.Inventory.logs, log],
+            },
+          }))
+        }, idx * 400)
+      })
+
+      // Complete inventory after all logs are streamed
+      setTimeout(() => {
+        setAgentStatuses((prev) => ({
+          ...prev,
+          Inventory: { ...prev.Inventory, status: 'completed' },
+        }))
+      }, inventoryLogs.length * 400 + 200)
+    }, analyticsLogs.length * 400 + 800)
+
+    // Start Finance agent last, then switch view
+    setTimeout(() => {
+      setAgentStatuses((prev) => ({
+        ...prev,
+        Finance: { status: 'running', logs: [] },
+      }))
+
+      // Stream finance logs
+      financeLogs.forEach((log, idx) => {
+        setTimeout(() => {
+          setAgentStatuses((prev) => ({
+            ...prev,
+            Finance: {
+              status: prev.Finance.status,
+              logs: [...prev.Finance.logs, log],
+            },
+          }))
+        }, idx * 400)
+      })
+
+      // Complete finance and switch to invoice view
+      setTimeout(() => {
+        setAgentStatuses((prev) => ({
+          ...prev,
+          Finance: { ...prev.Finance, status: 'completed' },
+        }))
+        setActiveView('invoice')
+        setIsProcessing(false)
+      }, financeLogs.length * 400 + 200)
+    }, analyticsLogs.length * 400 + inventoryLogs.length * 400 + 1600)
+  }
 
   const handleRefresh = () => {
     setIsRefreshing(true)
     setTimeout(() => setIsRefreshing(false), 1000)
-  }
-
-  const handleCommand = (command: string) => {
-    console.log('Command received:', command)
-    // Auto-activate agents based on command
-    if (
-      command.toLowerCase().includes('finance') ||
-      command.toLowerCase().includes('revenue')
-    ) {
-      setActiveAgent('finance')
-    } else if (
-      command.toLowerCase().includes('inventory') ||
-      command.toLowerCase().includes('warehouse')
-    ) {
-      setActiveAgent('inventory')
-    } else if (
-      command.toLowerCase().includes('analytics') ||
-      command.toLowerCase().includes('report')
-    ) {
-      setActiveAgent('analytics')
-    }
   }
 
   return (
@@ -92,17 +227,17 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 auto-rows-max">
           {/* Left Panel - Command Input */}
           <div className="lg:col-span-1 h-[600px] md:h-[700px]">
-            <CommandPanel onCommand={handleCommand} />
+            <CommandPanel onCommand={handleCommand} isProcessing={isProcessing} />
           </div>
 
           {/* Center Panel - Agent Matrix */}
           <div className="lg:col-span-1 h-[600px] md:h-[700px]">
-            <AgentMatrix activeAgent={activeAgent} />
+            <AgentMatrix agentStatuses={agentStatuses} />
           </div>
 
           {/* Right Panel - Output Canvas */}
           <div className="lg:col-span-1 h-[600px] md:h-[700px]">
-            <OutputCanvas />
+            <OutputCanvas activeView={activeView} onViewChange={setActiveView} />
           </div>
         </div>
 

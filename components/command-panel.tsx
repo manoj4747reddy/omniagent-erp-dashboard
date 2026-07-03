@@ -11,9 +11,10 @@ interface Message {
 
 interface CommandPanelProps {
   onCommand: (command: string) => void
+  isProcessing?: boolean
 }
 
-export function CommandPanel({ onCommand }: CommandPanelProps) {
+export function CommandPanel({ onCommand, isProcessing = false }: CommandPanelProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -116,9 +117,13 @@ export function CommandPanel({ onCommand }: CommandPanelProps) {
           </div>
           <button
             onClick={handleSend}
-            disabled={!input.trim()}
-            className="p-2 rounded bg-amber-400/10 hover:bg-amber-400/20 text-amber-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
-            title="Send command"
+            disabled={!input.trim() || isProcessing}
+            className={`p-2 rounded text-amber-400 transition-all duration-200 ${
+              isProcessing
+                ? 'bg-amber-400/5 opacity-50 cursor-not-allowed'
+                : 'bg-amber-400/10 hover:bg-amber-400/20 disabled:opacity-30'
+            }`}
+            title={isProcessing ? 'Processing command...' : 'Send command'}
           >
             <Send className="w-4 h-4" />
           </button>
