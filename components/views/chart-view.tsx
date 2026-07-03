@@ -13,8 +13,13 @@ import {
   Line,
 } from 'recharts'
 import { TrendingUp } from 'lucide-react'
+import type { InventoryItem } from '@/lib/supabase'
 
-const inventoryData = [
+interface ChartViewProps {
+  inventoryData?: InventoryItem[]
+}
+
+const defaultInventoryData = [
   { warehouse: 'Warehouse A', current: 4230, capacity: 5000, reserve: 500 },
   { warehouse: 'Warehouse B', current: 3890, capacity: 5000, reserve: 500 },
   { warehouse: 'Warehouse C', current: 2150, capacity: 4000, reserve: 400 },
@@ -32,7 +37,24 @@ const trendData = [
   { month: 'Jul', units: 5200, orders: 580 },
 ]
 
-export function ChartView() {
+export function ChartView({ inventoryData }: ChartViewProps) {
+  // Transform Supabase data or use defaults
+  const chartData =
+    inventoryData && inventoryData.length > 0
+      ? inventoryData.map((item) => ({
+          warehouse: item.warehouse,
+          current: item.quantity,
+          capacity: Math.ceil(item.quantity / 0.75), // Estimate capacity at 75% utilization
+          reserve: item.reorder_level,
+        }))
+      : defaultInventoryData
+
+  const totalInventory = chartData.reduce((sum, item) => sum + item.current, 0)
+  const avgUtilization = Math.round(
+    (chartData.reduce((sum, item) => sum + item.current, 0) /
+      chartData.reduce((sum, item) => sum + item.capacity, 0)) *
+      100
+  )
   return (
     <div className="p-8 space-y-8">
       {/* Inventory Levels */}
@@ -45,7 +67,7 @@ export function ChartView() {
         </div>
 
         <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={inventoryData}>
+          <BarChart data={chartData}>
             <defs>
               <linearGradient id="colorCurrent" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#fbbf24" stopOpacity={0.8} />
@@ -146,19 +168,19 @@ export function ChartView() {
         {[
           {
             label: 'Total Inventory',
-            value: '19,320 units',
+            value: `${totalInventory.toLocaleString()} units`,
             trend: '+12% this month',
             color: 'text-amber-400',
           },
           {
             label: 'Avg Utilization',
-            value: '78%',
+            value: `${avgUtilization}%`,
             trend: '+3% this month',
             color: 'text-cyan-400',
           },
           {
             label: 'At-Risk Items',
-            value: '340 units',
+            value: `${chartData.filter((item) => item.current < item.reserve).length} warehouses`,
             trend: '-5% this month',
             color: 'text-emerald-400',
           },

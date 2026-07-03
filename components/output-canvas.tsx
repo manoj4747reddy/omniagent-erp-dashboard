@@ -12,12 +12,15 @@ import {
 import { InvoiceView } from './views/invoice-view'
 import { ChartView } from './views/chart-view'
 import { KPIView } from './views/kpi-view'
+import type { Invoice, InventoryItem } from '@/lib/supabase'
 
 type ViewType = 'welcome' | 'invoice' | 'inventory' | 'analytics'
 
 interface OutputCanvasProps {
   activeView?: ViewType
   onViewChange?: (view: ViewType) => void
+  invoice?: Invoice | null
+  inventoryData?: InventoryItem[]
 }
 
 const VIEW_TABS = [
@@ -29,6 +32,8 @@ const VIEW_TABS = [
 export function OutputCanvas({
   activeView: controlledActiveView = 'welcome',
   onViewChange,
+  invoice,
+  inventoryData = [],
 }: OutputCanvasProps) {
   const [localView, setLocalView] = useState<ViewType>('welcome')
   const activeView = controlledActiveView !== 'welcome' ? controlledActiveView : localView
@@ -43,9 +48,9 @@ export function OutputCanvas({
   const renderView = () => {
     switch (activeView) {
       case 'invoice':
-        return <InvoiceView />
+        return <InvoiceView invoice={invoice} />
       case 'inventory':
-        return <ChartView />
+        return <ChartView inventoryData={inventoryData} />
       case 'analytics':
         return <KPIView />
       case 'welcome':

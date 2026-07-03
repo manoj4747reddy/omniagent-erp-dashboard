@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Settings, RefreshCw, Bell, Clock } from 'lucide-react'
 import { CommandPanel } from '@/components/command-panel'
 import { AgentMatrix } from '@/components/agent-matrix'
 import { OutputCanvas } from '@/components/output-canvas'
+import { fetchInventoryData, createInvoice, InventoryItem, Invoice } from '@/lib/supabase'
 
 type AgentStatus = 'idle' | 'running' | 'completed'
 type ViewType = 'welcome' | 'invoice' | 'inventory' | 'analytics'
@@ -29,6 +30,20 @@ export default function Dashboard() {
     Analytics: { status: 'idle', logs: [] },
   })
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [inventoryData, setInventoryData] = useState<InventoryItem[]>([])
+  const [generatedInvoice, setGeneratedInvoice] = useState<Invoice | null>(null)
+
+  // Fetch inventory data on component mount
+  useEffect(() => {
+    const loadInventoryData = async () => {
+      console.log('[v0] Fetching inventory data from Supabase...')
+      const data = await fetchInventoryData()
+      console.log('[v0] Inventory data loaded:', data)
+      setInventoryData(data)
+    }
+
+    loadInventoryData()
+  }, [])
 
   const analyticsLogs = [
     '> Collecting metrics from all sources...',
@@ -63,10 +78,11 @@ export default function Dashboard() {
     '✓ Invoice report generated',
   ]
 
-  const handleCommand = (command: string) => {
+  const handleCommand = async (command: string) => {
     if (isProcessing) return
 
     setIsProcessing(true)
+    console.log('[v0] Processing command:', command)
 
     // Reset all states
     setAgentStatuses({
@@ -75,6 +91,17 @@ export default function Dashboard() {
       Analytics: { status: 'idle', logs: [] },
     })
     setActiveView('welcome')
+
+    // Determine which agents to activate based on command
+    const checkInventory =
+      command.toLowerCase().includes('inventory') ||
+      command.toLowerCase().includes('stock') ||
+      command.toLowerCase().includes('warehouse')
+    const generateInvoice =
+      command.toLowerCase().includes('report') ||
+      command.toLowerCase().includes('invoice') ||
+      command.toLowerCase().includes('financial') ||
+      command.toLowerCase().includes('quarterly')
 
     // Start Analytics agent immediately
     setTimeout(() => {
@@ -105,65 +132,144 @@ export default function Dashboard() {
       }, analyticsLogs.length * 400 + 200)
     }, 100)
 
-    // Start Inventory agent after analytics completes
-    setTimeout(() => {
-      setAgentStatuses((prev) => ({
-        ...prev,
-        Inventory: { status: 'running', logs: [] },
-      }))
+    // Start Inventory agent if mentioned in command
+    if (checkInventory) {
+      setTimeout(async () => {
+        setAgentStatuses((prev) => ({
+          ...prev,
+          Inventory: { status: 'running', logs: [] },
+        }))
 
-      // Stream inventory logs
-      inventoryLogs.forEach((log, idx) => {
+        // Fetch live inventory data from database
+        const liveInventory = await fetchInventoryData()
+        console.log('[v0] Live inventory fetched:', liveInventory)
+
+        // Build dynamic logs from actual data
+        const dynamicInventoryLogs = [
+          '> Scanning warehouse systems...',
+          '> Connecting to WMS...',
+          ...liveInventory.map((item) => `✓ ${item.warehouse}: ${item.quantity} units (${item.product_name})`),
+          '> Analyzing stock levels...',
+          `✓ Total items tracked: ${liveInventory.length}`,
+          '✓ Inventory check complete',
+        ]
+
+        // Stream inventory logs
+        dynamicInventoryLogs.forEach((log, idx) => {
+          setTimeout(() => {
+            setAgentStatuses((prev) => ({
+              ...prev,
+              Inventory: {
+                status: prev.Inventory.status,
+                logs: [...prev.Inventory.logs, log],
+              },
+            }))
+          }, idx * 400)
+        })
+
+        // Complete inventory after all logs are streamed
         setTimeout(() => {
           setAgentStatuses((prev) => ({
             ...prev,
-            Inventory: {
-              status: prev.Inventory.status,
-              logs: [...prev.Inventory.logs, log],
-            },
+            Inventory: { ...prev.Inventory, status: 'completed' },
           }))
-        }, idx * 400)
-      })
+        }, dynamicInventoryLogs.length * 400 + 200)
+      }, analyticsLogs.length * 400 + 800)
+    }
 
-      // Complete inventory after all logs are streamed
-      setTimeout(() => {
+    // Start Finance agent if report/invoice mentioned
+    if (generateInvoice) {
+      const delayStart = checkInventory
+        ? analyticsLogs.length * 400 + inventoryLogs.length * 400 + 1600
+        : analyticsLogs.length * 400 + 800
+
+      setTimeout(async () => {
         setAgentStatuses((prev) => ({
           ...prev,
-          Inventory: { ...prev.Inventory, status: 'completed' },
+          Finance: { status: 'running', logs: [] },
         }))
-      }, inventoryLogs.length * 400 + 200)
-    }, analyticsLogs.length * 400 + 800)
 
-    // Start Finance agent last, then switch view
-    setTimeout(() => {
-      setAgentStatuses((prev) => ({
-        ...prev,
-        Finance: { status: 'running', logs: [] },
-      }))
+        // Stream finance logs
+        const financeStartLogs = [
+          '> Fetching Q3 financial data...',
+          '> Accessing ledger systems...',
+          '✓ Revenue calculated: $2.4M',
+          '✓ Operating expenses: $1.8M',
+          '✓ Net profit: $600K',
+        ]
 
-      // Stream finance logs
-      financeLogs.forEach((log, idx) => {
-        setTimeout(() => {
+        financeStartLogs.forEach((log, idx) => {
+          setTimeout(() => {
+            setAgentStatuses((prev) => ({
+              ...prev,
+              Finance: {
+                status: prev.Finance.status,
+                logs: [...prev.Finance.logs, log],
+              },
+            }))
+          }, idx * 400)
+        })
+
+        // After initial logs, create invoice in database
+        setTimeout(async () => {
           setAgentStatuses((prev) => ({
             ...prev,
             Finance: {
               status: prev.Finance.status,
-              logs: [...prev.Finance.logs, log],
+              logs: [...prev.Finance.logs, '> Creating invoice in database...'],
             },
           }))
-        }, idx * 400)
-      })
 
-      // Complete finance and switch to invoice view
+          // Create invoice record in Supabase
+          const newInvoice: Invoice = {
+            invoice_number: `INV-${Date.now()}`,
+            customer_name: 'Acme Corporation',
+            amount: 2400000,
+            status: 'pending',
+          }
+
+          const createdInvoice = await createInvoice(newInvoice)
+          console.log('[v0] Invoice created:', createdInvoice)
+
+          if (createdInvoice) {
+            setGeneratedInvoice(createdInvoice)
+          }
+
+          // Complete finance and switch to invoice view
+          setAgentStatuses((prev) => ({
+            ...prev,
+            Finance: {
+              status: prev.Finance.status,
+              logs: [
+                ...prev.Finance.logs,
+                '> Generating invoice report...',
+                '> PDF generation in progress...',
+                '✓ Invoice report generated',
+              ],
+            },
+          }))
+
+          setTimeout(() => {
+            setAgentStatuses((prev) => ({
+              ...prev,
+              Finance: { ...prev.Finance, status: 'completed' },
+            }))
+            setActiveView('invoice')
+            setIsProcessing(false)
+          }, 1200)
+        }, financeStartLogs.length * 400 + 400)
+      }, delayStart)
+    } else {
+      // If no finance agent needed, just complete after analytics/inventory
+      const finalDelay = checkInventory
+        ? analyticsLogs.length * 400 + inventoryLogs.length * 400 + 2000
+        : analyticsLogs.length * 400 + 1000
+
       setTimeout(() => {
-        setAgentStatuses((prev) => ({
-          ...prev,
-          Finance: { ...prev.Finance, status: 'completed' },
-        }))
-        setActiveView('invoice')
+        setActiveView('analytics')
         setIsProcessing(false)
-      }, financeLogs.length * 400 + 200)
-    }, analyticsLogs.length * 400 + inventoryLogs.length * 400 + 1600)
+      }, finalDelay)
+    }
   }
 
   const handleRefresh = () => {
@@ -237,7 +343,12 @@ export default function Dashboard() {
 
           {/* Right Panel - Output Canvas */}
           <div className="lg:col-span-1 h-[600px] md:h-[700px]">
-            <OutputCanvas activeView={activeView} onViewChange={setActiveView} />
+            <OutputCanvas
+              activeView={activeView}
+              onViewChange={setActiveView}
+              invoice={generatedInvoice}
+              inventoryData={inventoryData}
+            />
           </div>
         </div>
 
