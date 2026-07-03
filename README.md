@@ -1,33 +1,29 @@
-# omniagent-erp-dashboard
+# OmniAgent ERP 🚀
+### Autonomous Multi-Agent Workflows for Next-Generation Business Operations
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [v0](https://v0.app).
+OmniAgent ERP is a high-performance, AI-native management cockpit designed to eliminate traditional business software silos. Instead of navigating disconnected CRUD applications for finance, inventory, and analytics, business owners interact with a unified natural language command center driven by an autonomous multi-agent mesh network.
 
-## Built with v0
+## 🌟 Key Features
+* **Natural Language Command Center:** Text-driven operations that translate loose user intent into concrete business tasks.
+* **Autonomous Multi-Agent Matrix:** Staggered, inter-agent communication pipelines featuring:
+  * **Analytics Agent:** Deep-dives into market data and flags anomalies.
+  * **Inventory Agent:** Scans localized stock allocations and handles logistics triggers.
+  * **Finance Agent:** Automates transactional ledger balance adjustments and real-time generation of customer documents.
+* **Dynamic Canvas Engine:** A real-time rendering panel that seamlessly transitions between financial documents, live data visualizations, and system telemetry metrics.
 
-This repository is linked to a [v0](https://v0.app) project. You can continue developing by visiting the link below -- start new chats to make changes, and v0 will push commits directly to this repo. Every merge to `main` will automatically deploy.
+## 🛠️ Tech Stack & Architecture
+* **Frontend Framework:** Next.js 14 (App Router)
+* **Styling:** Tailwind CSS + Shadcn UI Components
+* **Icons & Telemetry:** Lucide React + High-fidelity CSS terminal simulation
+* **Architecture:** Component-driven state machine managing isolated worker threads to emulate low-latency background agent operations.
 
-[Continue working on v0 →](https://v0.app/chat/projects/prj_MTqKdzGWlNCb4tFIhg7ll6ovgIZW)
-
-## Getting Started
-
-First, run the development server:
-
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-## Learn More
-
-To learn more, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-- [v0 Documentation](https://v0.app/docs) - learn about v0 and how to use it.
+## 📂 Repository Structure
+```text
+├── app/                  # Next.js Application Core
+├── components/
+│   ├── ui/               # Base UI Primitives (Buttons, Layouts)
+│   └── views/            # Core OmniAgent Workspace Components
+│       ├── agent-card.tsx       # Individual Agent UI with Terminal Outputs
+│       ├── agent-matrix.tsx     # The Multi-Agent Mesh Grid
+│       ├── command-panel.tsx    # Live Command Input and History Logs
+│       └── output-canvas.tsx    # Dynamic Context-Aware Rendering Panel
